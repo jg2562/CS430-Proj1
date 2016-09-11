@@ -10,6 +10,17 @@ typedef struct {
 	unsigned char r,g,b;
 } Pixel;
 
+char* peek(FILE* fh){
+	int i;
+	char str[10];
+	for (i = 0; i < 10; i += 1){
+		str[i] = fgetc(fh);
+	}
+	for (i = 9; i >= 0; i -= 1){
+		ungetc(str[i],fh);
+	}
+	str[9] = '\0';
+}
 
 int read_value_from_header(FILE* fh){
 	int i;
