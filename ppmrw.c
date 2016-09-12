@@ -10,9 +10,8 @@ typedef struct {
 	unsigned char r,g,b;
 } Pixel;
 
-char* peek(FILE* fh){
+char* peek(FILE* fh, char* str){
 	int i;
-	char str[10];
 	for (i = 0; i < 10; i += 1){
 		str[i] = fgetc(fh);
 	}
@@ -20,14 +19,15 @@ char* peek(FILE* fh){
 		ungetc(str[i],fh);
 	}
 	str[9] = '\0';
+	return str;
 }
 
 int read_value_from_header(FILE* fh){
-	int i;
-	fscanf(fh,"=%i",i);
-	fprintf(stdout,"fscanf: %i\n",i);
-	return i;
+	int* i[1];
+	fscanf(fh,"%i ",i);
+	return *i;
 }
+
 
 int read_header(FILE* fh){	
 	char c;
@@ -63,7 +63,8 @@ int main(int argc, char* argv[]){
 	if (i = read_header(fh), i != 0){
 		return i;
 	}
-	fprintf(stdout, "W: %d, H: %d\n", width, height);
+	
+	fprintf(stdout, "W: %d, H: %d, Max: %d\n", width, height,max_value);
 	return 0;
 
 }
