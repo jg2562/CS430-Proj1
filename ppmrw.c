@@ -10,46 +10,70 @@ typedef struct {
 	unsigned char r,g,b;
 } Pixel;
 
-char* peek(FILE* fh, char* str){
-	int i;
-	for (i = 0; i < 10; i += 1){
-		str[i] = fgetc(fh);
-	}
-	for (i = 9; i >= 0; i -= 1){
-		ungetc(str[i],fh);
-	}
-	str[9] = '\0';
-	return str;
+/*
+	Used to peek at next char within file. 
+	fh: File handle
+	c: point to store char
+*/
+char* peek(FILE* fh, char* c){
+	// Pulls first char, stores it, then puts it back.
+	*c = fgetc(fh);
+	ungetc(*c,fh);
+	return c;
 }
 
-int read_value_from_header(FILE* fh){
-	int* i[1];
-	fscanf(fh,"%i ",i);
-	return *i;
-}
 
+/*
+	Checks if there is comment, if so it skips until a new line. 
+	fh: File handle
+*/
 void skip_comments(FILE* fh){
-	char c;
+	char c = 'a';
+	// Check next char.
 	peek(fh, &c);
 	if (c == '#'){
+		// Skips until finds new line.
 		while (c = fgetc(fh), c != '\n'){}
 	}
 }
 
+/*
+	Reads an int from file.
+	fh: File handle
+*/
+int read_value_from_header(FILE* fh){
+	// Checks if next value is comment and skips it.
+	skip_comments(fh);
+	int* i[1];
+	fscanf(fh,"%i ",i);
+	// TODO fix compile warning on this.
+	return *i;
+}
+
+/*
+	Reads the metadata from the image file. 
+	fh: File handle
+*/
 int read_header(FILE* fh){	
 	char c;
 	c = fgetc(fh);
+	// Checks if magic number begins with P.
 	if (c != 'P'){
 		fprintf(stderr,"Invalid image file, first magic number: %c\n",c);
 		return 1;
 	}
+	// Check if appropiate file formats
 	c = fgetc(fh);
 	if (c != '3' && c != '6'){
 		fprintf(stderr,"Invalid PPM file, PPM file type not supported. %c\n",c);
 		return 1;
 	}
+	// Saves input type as number
 	input_type = c - '0';
+	
+	// Skips down line.
 	fgetc(fh);
+	// Reads in metadata.
 	width = read_value_from_header(fh);
 	height = read_value_from_header(fh);
 	max_value = read_value_from_header(fh);
@@ -57,20 +81,26 @@ int read_header(FILE* fh){
 }
 
 int main(int argc, char* argv[]){
+	// Checks if proper amount of arguments
 	if (argc !=  4){
 		fprintf(stderr, "Proper Usage: ppmrw output_type input_file output_file\n");
 		return 1;
 	}
+	
+	// Opens file and checks if any access problems.
 	FILE* fh = fopen(argv[2], "rb");
 	if (fh == NULL){
 		fprintf(stderr, "File access error\n");
 		return 1;
 	}
+	
+	// Checks if had error when reading header.
 	int i;
 	if (i = read_header(fh), i != 0){
 		return i;
 	}
 	
+	// Read out photo metadata
 	fprintf(stdout, "W: %d, H: %d, Max: %d\n", width, height,max_value);
 	return 0;
 
