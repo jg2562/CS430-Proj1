@@ -50,10 +50,7 @@ int read_value_from_header(FILE* fh){
 	return *i;
 }
 
-/*
-	Reads the metadata from the image file. 
-	fh: File handle
-*/
+
 int read_header(FILE* fh){	
 	char c;
 	c = fgetc(fh);
