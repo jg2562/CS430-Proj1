@@ -28,6 +28,13 @@ int read_value_from_header(FILE* fh){
 	return *i;
 }
 
+void skip_comments(FILE* fh){
+	char c;
+	peek(fh, &c);
+	if (c == '#'){
+		while (c = fgetc(fh), c != '\n'){}
+	}
+}
 
 int read_header(FILE* fh){	
 	char c;
