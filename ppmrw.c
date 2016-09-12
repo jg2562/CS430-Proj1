@@ -77,6 +77,20 @@ int read_header(FILE* fh){
 	return 0;
 }
 
+void read_type_6(FILE* fh, Pixel* buffer){
+	int *sub_buffer = malloc(sizeof(int) * width * height);
+	fread(sub_buffer,1,width * height, fh);
+	int row, col, c;
+	for (row = 0; row < height; row += 1){
+		for (col = 0; col < width; col += 1){
+			c = sub_buffer[row * width + col];
+			buffer[row * width + col].r = c >> 24;
+			buffer[row * width + col].g = c >> 16 & 0xFF;
+			buffer[row * width + col].b = c >> 8 & 0xFF;
+		}
+	}
+}
+
 int main(int argc, char* argv[]){
 	// Checks if proper amount of arguments
 	if (argc !=  4){
