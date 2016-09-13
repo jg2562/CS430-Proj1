@@ -105,7 +105,6 @@ void read_type_6(FILE* fh, Pixel* buffer){
 			pix.b = bin >> 16 & 0xFF;
 			pix.g = bin >> 8 & 0xFF;
 			pix.r = bin & 0xFF;
-			printf("pix: %i %i %i\n", pix.r, pix.g, pix.b);
 			
 			buffer[row * width + col] = pix;
 		}
@@ -115,20 +114,24 @@ void read_type_6(FILE* fh, Pixel* buffer){
 	free(sub_buffer);
 }
 
+
+/*
+	
+*/
 void write_type_6(FILE* fh, Pixel* buffer){
-	// Creates a sub buffer to read in all file data
+	// Creates a sub_buffer to write all data to before file
 	int *sub_buffer = malloc(sizeof(int) * width * height);
 	// Reading in file data
 	int row, col;
 	Pixel pix;
 	for (row = 0; row < height; row += 1){
 		for (col = 0; col < width; col += 1){
-			// Changes data from binary to Pixel structure format
 			pix = buffer[row * width + col];
-			printf("pix: %i %i %i\n", pix.r, pix.g, pix.b);
+			// Or bytes together to transform Pixel structure to binary
 			sub_buffer[row * width + col] = pix.a << 24 | pix.b << 16 | pix.g << 8 | pix.r;
 		}
 	}
+	// Writes sub_buffer to file
 	fwrite(sub_buffer,sizeof(int),width * height, fh);
 	
 	// Frees buffer
@@ -143,7 +146,7 @@ int main(int argc, char* argv[]){
 	}
 	
 	if (output_type = atoi(argv[1]), output_type != 3 && output_type != 6){
-		fprintf(stderr, "Invalid file type on output file.\n");
+		fprintf(stderr, "Invalid file type for output file.\n");
 		return 1;
 	}
 	
@@ -164,10 +167,13 @@ int main(int argc, char* argv[]){
 		return i;
 	}
 	
+	// Create buffer to store photo
 	Pixel* buffer = malloc(sizeof(Pixel) * width * height);
+	
+	// Reads in photo
 	read_type_6(in, buffer);
 	
-	// Writes file
+	// Writes photo to file
 	write_header(out);
 	write_type_6(out, buffer);
 	
