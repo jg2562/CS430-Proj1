@@ -7,6 +7,7 @@ ppmrw.o:
 
 clean :
 	rm -f *.o
+	rm -f new_*.ppm
 
 rebuild: clean ppmrw.o
 
