@@ -59,12 +59,12 @@ int read_header(FILE* fh){
 	}
 	// Check if appropiate file formats
 	c = fgetc(fh);
-	if (c != '3' && c != '6'){
+	input_type = atoi(&c);
+	if (input_type != 3 && input_type != 6){
 		fprintf(stderr,"Invalid PPM file, PPM file type not supported. %c\n",c);
 		return 1;
 	}
 	// Saves input type as number
-	input_type = c - '0';
 	
 	// Skips down line.
 	fgetc(fh);
@@ -75,19 +75,36 @@ int read_header(FILE* fh){
 	max_value = read_value_from_header(fh, i);
 	return 0;
 }
+/* 
+	Writes header into output file
+	fh: output file handle
+*/
+void write_header(FILE* fh){
+	// writes out header to file stream
+	fprintf(fh, "P%i\n%i %i\n%i\n", output_type, width, height, max_value);
+}
 
+/*
+	Reads in a type 6 PPM file to buffer.
+	fh: file handle
+	buffer: buffer to store file data. 
+*/
 void read_type_6(FILE* fh, Pixel* buffer){
+	// Creates a sub buffer to read in all file data
 	int *sub_buffer = malloc(sizeof(int) * width * height);
+	// Reading in file data
 	fread(sub_buffer,1,width * height, fh);
 	int row, col, c;
 	for (row = 0; row < height; row += 1){
 		for (col = 0; col < width; col += 1){
+			// Changes data from binary to Pixel structure format
 			c = sub_buffer[row * width + col];
 			buffer[row * width + col].r = c >> 24;
 			buffer[row * width + col].g = c >> 16 & 0xFF;
 			buffer[row * width + col].b = c >> 8 & 0xFF;
 		}
 	}
+	// Frees buffer
 	free(sub_buffer);
 }
 
@@ -98,7 +115,7 @@ int main(int argc, char* argv[]){
 		return 1;
 	}
 	
-	if (output_type = atoi(argv[1]),printf("ot: %d : %s\n",output_type, argv[1]), output_type != 3 && output_type != 6){
+	if (output_type = atoi(argv[1]), output_type != 3 && output_type != 6){
 		fprintf(stderr, "Invalid file type on output file.\n");
 		return 1;
 	}
@@ -109,6 +126,10 @@ int main(int argc, char* argv[]){
 		fprintf(stderr, "File access error\n");
 		return 1;
 	}
+	FILE* out = fopen(argv[3], "wb");
+	if (out == NULL){
+		fprintf(stderr, "File write error\n");
+	}
 	
 	// Checks if had error when reading header.
 	int i;
@@ -116,8 +137,10 @@ int main(int argc, char* argv[]){
 		return i;
 	}
 	
-	// Read out photo metadata
-	fprintf(stdout, "W: %d, H: %d, Max: %d\n", width, height,max_value);
+	Pixel* buffer = malloc(sizeof(Pixel) * width * height);
+	read_type_6(in, buffer);
+	
+	write_header(out);
+	free(buffer);
 	return 0;
-
 }
