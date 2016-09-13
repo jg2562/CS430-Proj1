@@ -1,15 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int width;
-int height;
-int max_value;
 int input_type;
 int output_type;
 
 typedef struct {
 	unsigned char r,g,b,a;
 } Pixel;
+
+typedef struct{
+	int width, height, max_value;
+	Pixel* buffer;
+} Image;
+
 
 /*
 	Used to peek at next char within file. 
@@ -22,7 +25,6 @@ char* peek(FILE* fh, char* c){
 	ungetc(*c,fh);
 	return c;
 }
-
 
 /*
 	Checks if there is comment, if so it skips until a new line. 
@@ -49,7 +51,51 @@ int read_value_from_header(FILE* fh, int i){
 	return i;
 }
 
-int read_header(FILE* fh){	
+/*
+	Reads in a type 3 PPM file to buffer.
+	fh: file handle
+	buffer: buffer to store file data. 
+*/
+void read_type_3(FILE* fh, Image* img){
+	
+}
+
+/*
+	Reads in a type 6 PPM file to buffer.
+	fh: file handle
+	buffer: buffer to store file data. 
+*/
+void read_type_6(FILE* fh, Image *img){
+	// Creates a sub buffer to read in all file data
+	int *sub_buffer = malloc(sizeof(int) * img->width * img->height);
+	// Reading in file data
+	fread(sub_buffer,sizeof(int),img->width * img->height, fh);
+	int row, col, bin;
+	Pixel pix;
+	for (row = 0; row < img->height; row += 1){
+		for (col = 0; col < img->width; col += 1){
+			// Changes data from binary to Pixel structure format
+			bin = sub_buffer[row * img->width + col];
+			pix = img->buffer[row * img->width + col];
+			pix.a = bin >> 24;
+			pix.b = bin >> 16 & 0xFF;
+			pix.g = bin >> 8 & 0xFF;
+			pix.r = bin & 0xFF;
+			
+			img->buffer[row * img->width + col] = pix;
+		}
+	}
+	
+	// Frees buffer
+	free(sub_buffer);
+}
+
+/*
+	Reads in an image file to the Image structure
+	fh: file handle
+	img: Image structure to store image data
+*/
+int read_file(FILE* fh, Image* img){	
 	char c;
 	c = fgetc(fh);
 	// Checks if magic number begins with P.
@@ -60,83 +106,88 @@ int read_header(FILE* fh){
 	// Check if appropiate file formats
 	c = fgetc(fh);
 	input_type = atoi(&c);
-	if (input_type != 3 && input_type != 6){
-		fprintf(stderr,"Invalid PPM file, PPM file type not supported. %c\n",c);
-		return 1;
-	}
-	// Saves input type as number
 	
 	// Skips down line.
 	fgetc(fh);
+	
 	// Reads in metadata.
 	int i;
-	width = read_value_from_header(fh, i);
-	height = read_value_from_header(fh, i);
-	max_value = read_value_from_header(fh, i);
-	return 0;
-}
-/* 
-	Writes header into output file
-	fh: output file handle
-*/
-void write_header(FILE* fh){
-	// writes out header to file stream
-	fprintf(fh, "P%i\n%i %i\n%i\n", output_type, width, height, max_value);
-}
-
-/*
-	Reads in a type 6 PPM file to buffer.
-	fh: file handle
-	buffer: buffer to store file data. 
-*/
-void read_type_6(FILE* fh, Pixel* buffer){
-	// Creates a sub buffer to read in all file data
-	int *sub_buffer = malloc(sizeof(int) * width * height);
-	// Reading in file data
-	fread(sub_buffer,sizeof(int),width * height, fh);
-	int row, col, bin;
-	Pixel pix;
-	for (row = 0; row < height; row += 1){
-		for (col = 0; col < width; col += 1){
-			// Changes data from binary to Pixel structure format
-			bin = sub_buffer[row * width + col];
-			pix = buffer[row * width + col];
-			pix.a = bin >> 24;
-			pix.b = bin >> 16 & 0xFF;
-			pix.g = bin >> 8 & 0xFF;
-			pix.r = bin & 0xFF;
-			
-			buffer[row * width + col] = pix;
-		}
+	img->width = read_value_from_header(fh, i);
+	img->height = read_value_from_header(fh, i);
+	img->max_value = read_value_from_header(fh, i);
+	// Create buffer to store photo
+	img->buffer = malloc(sizeof(Pixel) * img->width * img->height);
+	switch(input_type){
+		case 3:
+			read_type_3(fh, img);
+			return 0;
+		case 6:
+			read_type_6(fh, img);
+			return 0;
+		default:
+			fprintf(stderr,"Invalid PPM file, PPM file type not supported. %c\n",c);
+			return 1;
 	}
-	// Frees buffer
-	printf("\n");
-	free(sub_buffer);
 }
 
+/*
+	Writes a P3 image from an Image structure to an file
+	fh: file handle
+	img: Image structure storing image data
+*/
+void write_type_3(FILE* fh, Image* img){
+	
+}
 
 /*
-	
+	Writes a P6 image from an Image structure to an file
+	fh: file handle
+	img: Image structure storing image data
 */
-void write_type_6(FILE* fh, Pixel* buffer){
+void write_type_6(FILE* fh, Image* img){
 	// Creates a sub_buffer to write all data to before file
-	int *sub_buffer = malloc(sizeof(int) * width * height);
+	int *sub_buffer = malloc(sizeof(int) * img->width * img->height);
 	// Reading in file data
 	int row, col;
 	Pixel pix;
-	for (row = 0; row < height; row += 1){
-		for (col = 0; col < width; col += 1){
-			pix = buffer[row * width + col];
+	for (row = 0; row < img->height; row += 1){
+		for (col = 0; col < img->width; col += 1){
+			pix = img->buffer[row * img->width + col];
 			// Or bytes together to transform Pixel structure to binary
-			sub_buffer[row * width + col] = pix.a << 24 | pix.b << 16 | pix.g << 8 | pix.r;
+			sub_buffer[row * img->width + col] = pix.a << 24 | pix.b << 16 | pix.g << 8 | pix.r;
 		}
 	}
 	// Writes sub_buffer to file
-	fwrite(sub_buffer,sizeof(int),width * height, fh);
+	fwrite(sub_buffer,sizeof(int),img->width * img->height, fh);
 	
 	// Frees buffer
 	free(sub_buffer);
 }
+
+
+/* 
+	Writes image structure into output file
+	fh: output file handle
+	img: image structure to write
+	output_type: the type of file to export as
+*/
+int write_file(FILE* fh, Image* img, int output_type){
+	// writes out header to file stream
+	fprintf(fh, "P%i\n%i %i\n%i\n", output_type, img->width, img->height, img->max_value);
+	switch(output_type){
+		case 3:
+			write_type_3(fh, img);
+			return 0;
+		case 6:
+			write_type_6(fh, img);
+			return 0;
+		default:
+			fprintf(stderr,"Invalid PPM output type.\n");
+			return 1;
+		
+	}
+}
+
 
 int main(int argc, char* argv[]){
 	// Checks if proper amount of arguments
@@ -161,23 +212,18 @@ int main(int argc, char* argv[]){
 		fprintf(stderr, "File write error\n");
 	}
 	
+	
+	Image img;
 	// Checks if had error when reading header.
 	int i;
-	if (i = read_header(in), i != 0){
+	if (i = read_file(in, &img), i != 0){
 		return i;
 	}
 	
-	// Create buffer to store photo
-	Pixel* buffer = malloc(sizeof(Pixel) * width * height);
-	
-	// Reads in photo
-	read_type_6(in, buffer);
-	
 	// Writes photo to file
-	write_header(out);
-	write_type_6(out, buffer);
+	write_file(out, &img, output_type);
 	
 	// Clean up
-	free(buffer);
+	free(img.buffer);
 	return 0;
 }
