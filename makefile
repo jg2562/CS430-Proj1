@@ -11,9 +11,9 @@ clean :
 rebuild: clean ppmrw.o
 
 test6:
-	./ppmrw.o 6 triforce.ppm triforce_new.ppm
+	./ppmrw.o 6 P6I.ppm new_P6I.ppm
 test3:
-	./ppmrw.o 3 P6I.ppm P6I_new.ppm
+	./ppmrw.o 3 P3I.ppm new_P3I.ppm
 retest6: clear rebuild test6
 
 clear :
