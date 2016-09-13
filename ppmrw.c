@@ -5,6 +5,7 @@ int width;
 int height;
 int max_value;
 int input_type;
+int output_type;
 
 typedef struct {
 	unsigned char r,g,b;
@@ -41,15 +42,12 @@ void skip_comments(FILE* fh){
 	Reads an int from file.
 	fh: File handle
 */
-int read_value_from_header(FILE* fh){
+int read_value_from_header(FILE* fh, int i){
 	// Checks if next value is comment and skips it.
 	skip_comments(fh);
-	int* i[1];
-	fscanf(fh,"%i ",i);
-	// TODO fix compile warning on this.
-	return *i;
+	fscanf(fh,"%i ",&i);
+	return i;
 }
-
 
 int read_header(FILE* fh){	
 	char c;
@@ -71,9 +69,10 @@ int read_header(FILE* fh){
 	// Skips down line.
 	fgetc(fh);
 	// Reads in metadata.
-	width = read_value_from_header(fh);
-	height = read_value_from_header(fh);
-	max_value = read_value_from_header(fh);
+	int i;
+	width = read_value_from_header(fh, i);
+	height = read_value_from_header(fh, i);
+	max_value = read_value_from_header(fh, i);
 	return 0;
 }
 
@@ -89,6 +88,7 @@ void read_type_6(FILE* fh, Pixel* buffer){
 			buffer[row * width + col].b = c >> 8 & 0xFF;
 		}
 	}
+	free(sub_buffer);
 }
 
 int main(int argc, char* argv[]){
@@ -98,16 +98,21 @@ int main(int argc, char* argv[]){
 		return 1;
 	}
 	
+	if (output_type = atoi(argv[1]),printf("ot: %d : %s\n",output_type, argv[1]), output_type != 3 && output_type != 6){
+		fprintf(stderr, "Invalid file type on output file.\n");
+		return 1;
+	}
+	
 	// Opens file and checks if any access problems.
-	FILE* fh = fopen(argv[2], "rb");
-	if (fh == NULL){
+	FILE* in = fopen(argv[2], "rb");
+	if (in == NULL){
 		fprintf(stderr, "File access error\n");
 		return 1;
 	}
 	
 	// Checks if had error when reading header.
 	int i;
-	if (i = read_header(fh), i != 0){
+	if (i = read_header(in), i != 0){
 		return i;
 	}
 	
