@@ -8,7 +8,7 @@ int input_type;
 int output_type;
 
 typedef struct {
-	unsigned char r,g,b;
+	unsigned char r,g,b,a;
 } Pixel;
 
 /*
@@ -93,17 +93,44 @@ void read_type_6(FILE* fh, Pixel* buffer){
 	// Creates a sub buffer to read in all file data
 	int *sub_buffer = malloc(sizeof(int) * width * height);
 	// Reading in file data
-	fread(sub_buffer,1,width * height, fh);
-	int row, col, c;
+	fread(sub_buffer,sizeof(int),width * height, fh);
+	int row, col, bin;
+	Pixel pix;
 	for (row = 0; row < height; row += 1){
 		for (col = 0; col < width; col += 1){
 			// Changes data from binary to Pixel structure format
-			c = sub_buffer[row * width + col];
-			buffer[row * width + col].r = c >> 24;
-			buffer[row * width + col].g = c >> 16 & 0xFF;
-			buffer[row * width + col].b = c >> 8 & 0xFF;
+			bin = sub_buffer[row * width + col];
+			pix = buffer[row * width + col];
+			pix.a = bin >> 24;
+			pix.b = bin >> 16 & 0xFF;
+			pix.g = bin >> 8 & 0xFF;
+			pix.r = bin & 0xFF;
+			printf("pix: %i %i %i\n", pix.r, pix.g, pix.b);
+			
+			buffer[row * width + col] = pix;
 		}
 	}
+	// Frees buffer
+	printf("\n");
+	free(sub_buffer);
+}
+
+void write_type_6(FILE* fh, Pixel* buffer){
+	// Creates a sub buffer to read in all file data
+	int *sub_buffer = malloc(sizeof(int) * width * height);
+	// Reading in file data
+	int row, col;
+	Pixel pix;
+	for (row = 0; row < height; row += 1){
+		for (col = 0; col < width; col += 1){
+			// Changes data from binary to Pixel structure format
+			pix = buffer[row * width + col];
+			printf("pix: %i %i %i\n", pix.r, pix.g, pix.b);
+			sub_buffer[row * width + col] = pix.a << 24 | pix.b << 16 | pix.g << 8 | pix.r;
+		}
+	}
+	fwrite(sub_buffer,sizeof(int),width * height, fh);
+	
 	// Frees buffer
 	free(sub_buffer);
 }
@@ -140,7 +167,11 @@ int main(int argc, char* argv[]){
 	Pixel* buffer = malloc(sizeof(Pixel) * width * height);
 	read_type_6(in, buffer);
 	
+	// Writes file
 	write_header(out);
+	write_type_6(out, buffer);
+	
+	// Clean up
 	free(buffer);
 	return 0;
 }
