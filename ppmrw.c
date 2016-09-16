@@ -39,6 +39,9 @@ void skip_comments(FILE* fh){
 	}
 }
 
+
+
+
 /*
 	Reads an int from file.
 	fh: File handle
@@ -46,7 +49,7 @@ void skip_comments(FILE* fh){
 int read_value_from_header(FILE* fh, int i){
 	// Checks if next value is comment and skips it.
 	skip_comments(fh);
-	fscanf(fh,"%i ",&i);
+	fscanf(fh,"%i",&i);
 	return i;
 }
 
@@ -62,11 +65,11 @@ void read_type_3(FILE* fh, Image* img){
 		for (col = 0; col < img->width; col += 1){
 			// Changes data from binary to Pixel structure format
 			Pixel pix = img->buffer[row * img->width + col];
-			fscanf(fh, "%i ", a);
+			fscanf(fh, "%i", a);
 			pix.r = *a;
-			fscanf(fh, "%i ", a);
+			fscanf(fh, "%i", a);
 			pix.g = *a;
-			fscanf(fh, "%i ", a);
+			fscanf(fh, "%i", a);
 			pix.b = *a;
 			img->buffer[row * img->width + col] = pix;
 		}
@@ -80,24 +83,26 @@ void read_type_3(FILE* fh, Image* img){
 */
 void read_type_6(FILE* fh, Image *img){
 	// Creates a sub buffer to read in all file data
-	int *sub_buffer = malloc(sizeof(int) * img->width * img->height);
+	unsigned char* sub_buffer = malloc(sizeof(Pixel) * img->width * img->height);
+	fgetc(fh);
+
 	// Reading in file data
-	fread(sub_buffer,sizeof(Pixel),img->width * img->height, fh);
-	int row, col, bin;
-	for (row = 0; row < img->height; row += 1){
-		for (col = 0; col < img->width; col += 1){
-			// Changes data from binary to Pixel structure format
-			bin = sub_buffer[row * img->width + col];
-			Pixel pix;
-			// pix.a = 0xFF;
-			pix.b = bin >> 16 & 0xFF;
-			pix.g = bin >> 8 & 0xFF;
-			pix.r = bin & 0xFF;
-			img->buffer[row * img->width + col] = pix;
-			
-		}
+	if (fread(sub_buffer,sizeof(char),img->width * img->height * 3, fh) != (img->width * img->height)){
+		fprintf(stderr, "File Read error!");
+	}
+	int i;
+	for (i = 0; i < img->width * img->height * 3; i +=1){
+		printf("%x\n", sub_buffer[i]);
 	}
 	
+	for (i = 0; i < img->width * img->height; i +=1){
+		Pixel pix;
+		pix.r = sub_buffer[i * 3];
+		pix.g = sub_buffer[(i * 3) + 1];
+		pix.b = sub_buffer[(i * 3) + 2];
+		// printf("%i %i %i\n", pix.r, pix.g, pix.b);
+		img->buffer[i] = pix;
+	}
 	// Frees buffer
 	free(sub_buffer);
 }
@@ -119,14 +124,13 @@ int read_file(FILE* fh, Image* img){
 	c = fgetc(fh);
 	input_type = atoi(&c);
 	
-	// Skips down line.
-	fgetc(fh);
-	
+	c = fgetc(fh);
 	// Reads in metadata.
 	int i;
 	img->width = read_value_from_header(fh, i);
 	img->height = read_value_from_header(fh, i);
 	img->max_value = read_value_from_header(fh, i);
+	printf("W: %i H: %i MV: %i\n",img->width, img->height, img->max_value);
 	// Create buffer to store photo
 	img->buffer = malloc(sizeof(Pixel) * img->width * img->height);
 	switch(input_type){
@@ -138,7 +142,7 @@ int read_file(FILE* fh, Image* img){
 			return 0;
 		default:
 			fprintf(stderr,"Invalid PPM file, PPM file type not supported. %c\n",c);
-			return 1;
+			exit(0);
 	}
 }
 
@@ -168,23 +172,21 @@ void write_type_3(FILE* fh, Image* img){
 */
 void write_type_6(FILE* fh, Image* img){
 	// Creates a sub_buffer to write all data to before file
-	int *sub_buffer = malloc(sizeof(Pixel) * img->width * img->height);
+	unsigned char *sub_buffer = malloc(sizeof(Pixel) * img->width * img->height);
+
 	// Reading in file data
-	int row, col;
-	Pixel pix;
-	for (row = 0; row < img->height; row += 1){
-		for (col = 0; col < img->width; col += 1){
-			pix = img->buffer[row * img->width + col];
-			// Or bytes together to transform Pixel structure to binary
-			// sub_buffer[row * img->width + col] = pix.a << 24 | pix.b << 16 | pix.g << 8 | pix.r;
-			sub_buffer[row * img->width + col] = pix.b << 16 | pix.g << 8 | pix.r;
-		}
+	int i;
+	for (i = 0; i < img->height * img->width * sizeof(Pixel); i+=1){		
+		Pixel pix = img->buffer[i];
+		sub_buffer[(i * 3)] = pix.r;
+		sub_buffer[(i * 3) + 1] = pix.g;
+		sub_buffer[(i * 3) + 2] = pix.b;
 	}
 	// Writes sub_buffer to file
-	fwrite(sub_buffer,sizeof(Pixel),img->width * img->height, fh);
+	fwrite(sub_buffer, 1,img->width * img->height * sizeof(Pixel), fh);
 	
 	// Frees buffer
-	free(sub_buffer);
+	// free(sub_buffer);
 }
 
 
@@ -251,5 +253,7 @@ int main(int argc, char* argv[]){
 	
 	// Clean up
 	free(img.buffer);
+	fclose(in);
+	fclose(out);
 	return 0;
 }
