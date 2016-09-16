@@ -56,20 +56,18 @@ int read_value_from_header(FILE* fh, int i){
 	buffer: buffer to store file data. 
 */
 void read_type_3(FILE* fh, Image* img){
-	int row, col;
 	int *a = malloc(sizeof(int));
-	for (row = 0; row < img->height; row += 1){
-		for (col = 0; col < img->width; col += 1){
-			// Changes data from binary to Pixel structure format
-			Pixel pix = img->buffer[row * img->width + col];
-			fscanf(fh, "%i", a);
-			pix.r = *a;
-			fscanf(fh, "%i", a);
-			pix.g = *a;
-			fscanf(fh, "%i", a);
-			pix.b = *a;
-			img->buffer[row * img->width + col] = pix;
-		}
+	int i;
+	for (i = 0; i < img->height * img->width; i += 1){
+		// Changes data from binary to Pixel structure format
+		Pixel pix;
+		fscanf(fh, "%i", a);
+		pix.r = *a;
+		fscanf(fh, "%i", a);
+		pix.g = *a;
+		fscanf(fh, "%i", a);
+		pix.b = *a;
+		img->buffer[i] = pix;
 	}
 }
 
@@ -107,13 +105,13 @@ void read_type_6(FILE* fh, Image *img){
 	fh: file handle
 	img: Image structure to store image data
 */
-int read_file(FILE* fh, Image* img){	
+void read_file(FILE* fh, Image* img){	
 	char c;
 	c = fgetc(fh);
 	// Checks if magic number begins with P.
 	if (c != 'P'){
 		fprintf(stderr,"Invalid image file, first magic number: %c\n",c);
-		return 1;
+		exit(1);
 	}
 	
 	// Check if appropiate file formats
@@ -137,10 +135,10 @@ int read_file(FILE* fh, Image* img){
 	switch(input_type){
 		case 3:
 			read_type_3(fh, img);
-			return 0;
+			return;
 		case 6:
 			read_type_6(fh, img);
-			return 0;
+			return;
 		default:
 			fprintf(stderr,"Invalid PPM file, PPM file type not supported. %c\n",c);
 			exit(1);
@@ -153,17 +151,12 @@ int read_file(FILE* fh, Image* img){
 	img: Image structure storing image data
 */
 void write_type_3(FILE* fh, Image* img){
-	int row, col, a;
-	for (row = 0; row < img->height; row += 1){
-		for (col = 0; col < img->width; col += 1){
-			// Changes data from binary to Pixel structure format
-			Pixel pix = img->buffer[row * img->width + col];
-			fprintf(fh, "%i\n", pix.r);
-			fprintf(fh, "%i\n", pix.g);
-			fprintf(fh, "%i\n", pix.b);
-		}
+	int i;
+	for (i = 0; i < img->height * img->width; i += 1){
+		// Changes data from Pixel structure format to binary
+		Pixel pix = img->buffer[i];
+		fprintf(fh, "%i\n%i\n%i\n", pix.r, pix.g, pix.b);
 	}
-	
 }
 
 /*
@@ -197,19 +190,19 @@ void write_type_6(FILE* fh, Image* img){
 	img: image structure to write
 	output_type: the type of file to export as
 */
-int write_file(FILE* fh, Image* img, int output_type){
+void write_file(FILE* fh, Image* img, int output_type){
 	// writes out header to file stream
 	fprintf(fh, "P%i\n%i %i\n%i\n", output_type, img->width, img->height, img->max_value);
 	switch(output_type){
 		case 3:
 			write_type_3(fh, img);
-			return 0;
+			return;
 		case 6:
 			write_type_6(fh, img);
-			return 0;
+			return;
 		default:
 			fprintf(stderr,"Invalid PPM output type.\n");
-			return 1;
+			exit(1);
 		
 	}
 }
@@ -219,12 +212,12 @@ int main(int argc, char* argv[]){
 	// Checks if proper amount of arguments
 	if (argc !=  4){
 		fprintf(stderr, "Proper Usage: ppmrw output_type input_file output_file\n");
-		return 1;
+		exit(1);
 	}
 	
 	if (output_type = atoi(argv[1]), output_type != 3 && output_type != 6){
 		fprintf(stderr, "Invalid file type for output file.\n");
-		return 1;
+		exit(1);
 	}
 	
 	// Opens file and checks if any access problems.
@@ -238,19 +231,13 @@ int main(int argc, char* argv[]){
 		fprintf(stderr, "File write error\n");
 	}
 	
-	
-	Image img;
-	// Checks if had error when reading header.
 	int i;
-	if (i = read_file(in, &img), i != 0){
-		return i;
-	}
+	Image img;
+	// Reads Photo from file to Image.
+	read_file(in, &img);
 	
-	
-	// Writes photo to file
-	if (i = write_file(out, &img, output_type), i != 0){
-		return i;
-	}
+	// Writes photo from Image to file
+	write_file(out, &img, output_type);
 	
 	// Clean up
 	free(img.buffer);
