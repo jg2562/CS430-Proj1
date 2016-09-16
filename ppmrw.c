@@ -51,6 +51,20 @@ int read_value_from_header(FILE* fh, int i){
 }
 
 /*
+	Reads a char while checking for end of file.
+	fh: File handle
+*/
+char read_char(FILE* fh){
+	char a = ' ';
+	if (peek(fh,&a), a == -1){
+		fprintf(stderr, "Error: Invalid P3 format.\n");
+		exit(1);
+	}
+	fscanf(fh, "%i", &a);
+	return a;
+}
+
+/*
 	Reads in a type 3 PPM file to buffer.
 	fh: file handle
 	buffer: buffer to store file data. 
@@ -61,12 +75,9 @@ void read_type_3(FILE* fh, Image* img){
 	for (i = 0; i < img->height * img->width; i += 1){
 		// Changes data from binary to Pixel structure format
 		Pixel pix;
-		fscanf(fh, "%i", a);
-		pix.r = *a;
-		fscanf(fh, "%i", a);
-		pix.g = *a;
-		fscanf(fh, "%i", a);
-		pix.b = *a;
+		pix.r = read_char(fh);
+		pix.g = read_char(fh);
+		pix.b = read_char(fh);
 		img->buffer[i] = pix;
 	}
 }
@@ -82,7 +93,7 @@ void read_type_6(FILE* fh, Image *img){
 
 	// Reading in file data & check if all data was read in
 	if (fread(sub_buffer, 1,img->width * img->height * sizeof(Pixel) + 10, fh) != (img->width * img->height * sizeof(Pixel))){
-		fprintf(stderr, "File Read error!");
+		fprintf(stderr, "Error: Invalid P6 format.\n");
 		exit(1);
 	}
 	
@@ -117,7 +128,7 @@ void read_file(FILE* fh, Image* img){
 	// Check if appropiate file formats
 	c = fgetc(fh);
 	input_type = atoi(&c);
-	c = fgetc(fh);
+	fgetc(fh);
 	
 	// Reads in metadata.
 	int i;
@@ -127,6 +138,19 @@ void read_file(FILE* fh, Image* img){
 	
 	// Removes extra new line
 	fgetc(fh);
+	// Error checking
+	if (img->width < 1){
+		fprintf(stderr, "Invalid image width metadata\n");
+		exit(1);
+	} else if (img->height < 1){
+		fprintf(stderr, "Invalid image height metadata\n");
+		exit(1);
+		
+	} else if (img->max_value < 1 || img->max_value > 255){
+		fprintf(stderr, "Invalid image max value metadata\n");
+		exit(1);
+	}
+	
 	
 	// Create buffer to store photo
 	img->buffer = malloc(sizeof(Pixel) * img->width * img->height);
@@ -223,12 +247,12 @@ int main(int argc, char* argv[]){
 	// Opens file and checks if any access problems.
 	FILE* in = fopen(argv[2], "rb");
 	if (in == NULL){
-		fprintf(stderr, "File access error\n");
+		fprintf(stderr, "Input file read error.\n");
 		return 1;
 	}
 	FILE* out = fopen(argv[3], "wb");
 	if (out == NULL){
-		fprintf(stderr, "File write error\n");
+		fprintf(stderr, "Output file write error.\n");
 	}
 	
 	int i;
