@@ -39,9 +39,6 @@ void skip_comments(FILE* fh){
 	}
 }
 
-
-
-
 /*
 	Reads an int from file.
 	fh: File handle
@@ -84,25 +81,23 @@ void read_type_3(FILE* fh, Image* img){
 void read_type_6(FILE* fh, Image *img){
 	// Creates a sub buffer to read in all file data
 	unsigned char* sub_buffer = malloc(sizeof(Pixel) * img->width * img->height);
-	fgetc(fh);
 
-	// Reading in file data
-	if (fread(sub_buffer,sizeof(char),img->width * img->height * 3, fh) != (img->width * img->height)){
+	// Reading in file data & check if all data was read in
+	if (fread(sub_buffer, 1,img->width * img->height * sizeof(Pixel) + 10, fh) != (img->width * img->height * sizeof(Pixel))){
 		fprintf(stderr, "File Read error!");
-	}
-	int i;
-	for (i = 0; i < img->width * img->height * 3; i +=1){
-		printf("%x\n", sub_buffer[i]);
+		exit(1);
 	}
 	
+	// Goes through buffer and extracts the data in chunks
+	int i;
 	for (i = 0; i < img->width * img->height; i +=1){
 		Pixel pix;
 		pix.r = sub_buffer[i * 3];
 		pix.g = sub_buffer[(i * 3) + 1];
 		pix.b = sub_buffer[(i * 3) + 2];
-		// printf("%i %i %i\n", pix.r, pix.g, pix.b);
 		img->buffer[i] = pix;
 	}
+	
 	// Frees buffer
 	free(sub_buffer);
 }
@@ -120,19 +115,25 @@ int read_file(FILE* fh, Image* img){
 		fprintf(stderr,"Invalid image file, first magic number: %c\n",c);
 		return 1;
 	}
+	
 	// Check if appropiate file formats
 	c = fgetc(fh);
 	input_type = atoi(&c);
-	
 	c = fgetc(fh);
+	
 	// Reads in metadata.
 	int i;
 	img->width = read_value_from_header(fh, i);
 	img->height = read_value_from_header(fh, i);
 	img->max_value = read_value_from_header(fh, i);
-	printf("W: %i H: %i MV: %i\n",img->width, img->height, img->max_value);
+	
+	// Removes extra new line
+	fgetc(fh);
+	
 	// Create buffer to store photo
 	img->buffer = malloc(sizeof(Pixel) * img->width * img->height);
+	
+	// Choose method to read in data
 	switch(input_type){
 		case 3:
 			read_type_3(fh, img);
@@ -142,7 +143,7 @@ int read_file(FILE* fh, Image* img){
 			return 0;
 		default:
 			fprintf(stderr,"Invalid PPM file, PPM file type not supported. %c\n",c);
-			exit(0);
+			exit(1);
 	}
 }
 
@@ -186,7 +187,7 @@ void write_type_6(FILE* fh, Image* img){
 	fwrite(sub_buffer, 1,img->width * img->height * sizeof(Pixel), fh);
 	
 	// Frees buffer
-	// free(sub_buffer);
+	free(sub_buffer);
 }
 
 
