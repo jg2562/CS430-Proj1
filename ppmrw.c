@@ -71,7 +71,7 @@ char read_char(FILE* fh){
 */
 void read_type_3(FILE* fh, Image* img){
 	int *a = malloc(sizeof(int));
-	int i;
+	unsigned int i;
 	for (i = 0; i < img->height * img->width; i += 1){
 		// Changes data from binary to Pixel structure format
 		Pixel pix;
@@ -98,7 +98,7 @@ void read_type_6(FILE* fh, Image *img){
 	}
 	
 	// Goes through buffer and extracts the data in chunks
-	int i;
+	unsigned int i;
 	for (i = 0; i < img->width * img->height; i +=1){
 		Pixel pix;
 		pix.r = sub_buffer[i * 3];
@@ -132,8 +132,8 @@ void read_file(FILE* fh, Image* img){
 	
 	// Reads in metadata.
 	int i;
-	img->width = read_value_from_header(fh, i);
 	img->height = read_value_from_header(fh, i);
+	img->width = read_value_from_header(fh, i);
 	img->max_value = read_value_from_header(fh, i);
 	
 	// Removes extra new line
@@ -175,7 +175,7 @@ void read_file(FILE* fh, Image* img){
 	img: Image structure storing image data
 */
 void write_type_3(FILE* fh, Image* img){
-	int i;
+	unsigned int i;
 	for (i = 0; i < img->height * img->width; i += 1){
 		// Changes data from Pixel structure format to binary
 		Pixel pix = img->buffer[i];
@@ -191,10 +191,10 @@ void write_type_3(FILE* fh, Image* img){
 void write_type_6(FILE* fh, Image* img){
 	// Creates a sub_buffer to write all data to before file
 	unsigned char *sub_buffer = malloc(sizeof(Pixel) * img->width * img->height);
-
+	
 	// Reading in file data
-	int i;
-	for (i = 0; i < img->height * img->width * sizeof(Pixel); i+=1){		
+	unsigned long i;
+	for (i = 0; i < img->height * img->width; i+=1){	
 		Pixel pix = img->buffer[i];
 		sub_buffer[(i * 3)] = pix.r;
 		sub_buffer[(i * 3) + 1] = pix.g;
@@ -243,7 +243,6 @@ int main(int argc, char* argv[]){
 		fprintf(stderr, "Invalid file type for output file.\n");
 		exit(1);
 	}
-	
 	// Opens file and checks if any access problems.
 	FILE* in = fopen(argv[2], "rb");
 	if (in == NULL){
@@ -254,7 +253,6 @@ int main(int argc, char* argv[]){
 	if (out == NULL){
 		fprintf(stderr, "Output file write error.\n");
 	}
-	
 	int i;
 	Image img;
 	// Reads Photo from file to Image.
