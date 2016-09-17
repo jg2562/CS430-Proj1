@@ -132,8 +132,8 @@ void read_file(FILE* fh, Image* img){
 	
 	// Reads in metadata.
 	int i;
-	img->height = read_value_from_header(fh, i);
 	img->width = read_value_from_header(fh, i);
+	img->height = read_value_from_header(fh, i);
 	img->max_value = read_value_from_header(fh, i);
 	
 	// Removes extra new line
@@ -193,7 +193,7 @@ void write_type_6(FILE* fh, Image* img){
 	unsigned char *sub_buffer = malloc(sizeof(Pixel) * img->width * img->height);
 	
 	// Reading in file data
-	unsigned long i;
+	long i;
 	for (i = 0; i < img->height * img->width; i+=1){	
 		Pixel pix = img->buffer[i];
 		sub_buffer[(i * 3)] = pix.r;
